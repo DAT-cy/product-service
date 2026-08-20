@@ -1,6 +1,8 @@
 package com.example.productservice.service.impl;
 
+import com.example.productservice.dto.ProductDto;
 import com.example.productservice.dto.request.CreateProductReq;
+import com.example.productservice.dto.request.ProductFilter;
 import com.example.productservice.entity.Category;
 import com.example.productservice.entity.Product;
 import com.example.productservice.exception.ApplicationException;
@@ -12,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 
@@ -33,4 +36,16 @@ public class ProductServiceImpl implements ProductService {
         productRepository.save(createProduct);
         return productRepository.save(createProduct);
     }
+
+    @Override
+    public List<ProductDto> search(ProductFilter productFilter) {
+
+        List<Product> productList = productRepository.findAllById(productFilter.getIds());
+
+        return productList.stream()
+                .map(productMapper::mapDto)
+                .toList();
+    }
+
+
 }

@@ -2,7 +2,9 @@ package com.example.productservice.controller;
 
 
 import com.example.productservice.dto.BaseResponse;
+import com.example.productservice.dto.ProductDto;
 import com.example.productservice.dto.request.CreateProductReq;
+import com.example.productservice.dto.request.ProductFilter;
 import com.example.productservice.entity.Product;
 import com.example.productservice.service.ProductService;
 import jakarta.validation.Valid;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -28,6 +32,15 @@ public class ProductController {
     ) {
         return ResponseEntity.ok(
                 new BaseResponse<>(productService.create(createProductReq),"result")
+        );
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<BaseResponse<List<ProductDto>>> search(
+            @RequestBody @Valid ProductFilter productFilter
+    ) {
+        return ResponseEntity.ok(
+                new BaseResponse<>(productService.search(productFilter),"result")
         );
     }
 }

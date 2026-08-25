@@ -1,5 +1,6 @@
 package com.example.productservice.service.impl;
 
+import com.example.productservice.dto.OrderItemDto;
 import com.example.productservice.dto.ProductDto;
 import com.example.productservice.dto.request.CreateProductReq;
 import com.example.productservice.dto.request.ProductFilter;
@@ -10,12 +11,15 @@ import com.example.productservice.mapper.ProductMapper;
 import com.example.productservice.repository.CategoryRepository;
 import com.example.productservice.repository.ProductRepository;
 import com.example.productservice.service.ProductService;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -39,12 +43,37 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductDto> search(ProductFilter productFilter) {
-
         List<Product> productList = productRepository.findAllById(productFilter.getIds());
-
         return productList.stream()
                 .map(productMapper::mapDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public Boolean updateQuantity(List<OrderItemDto> orderItemDtos) {
+
+        List<String> productIds = orderItemDtos.stream().map(OrderItemDto::getProductId).toList();
+
+        List<Product> products = productRepository.findByIdForUpdate(productIds);
+
+        Map<String, Product> productMap = products.stream().collect(
+                Collectors.toMap(
+                        Product::getId,product->product
+                )
+        );
+
+        for (OrderItemDto orderItemDto : orderItemDtos) {
+            Product product = productMap.get(orderItemDto.getProductId());
+            if (product == null) {
+                throw new ApplicationException("product not found");
+            }
+            if(product.getStock() < orderItemDto.getQuantity()){
+                throw new ApplicationException("product not enough");
+            }
+            product.setStock(product.getStock() - orderItemDto.getQuantity());
+        }
+        return true;
     }
 
 

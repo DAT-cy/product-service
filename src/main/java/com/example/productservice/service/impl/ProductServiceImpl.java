@@ -1,7 +1,6 @@
 package com.example.productservice.service.impl;
 
-import com.example.productservice.dto.OrderItemDto;
-import com.example.productservice.dto.ProductDto;
+import com.example.productservice.dto.*;
 import com.example.productservice.dto.request.CreateProductReq;
 import com.example.productservice.dto.request.ProductFilter;
 import com.example.productservice.entity.Category;
@@ -14,6 +13,7 @@ import com.example.productservice.service.ProductService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +29,8 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
 
     @Override
     public Product create(CreateProductReq createProductReq){
@@ -51,7 +53,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public Boolean updateQuantity(List<OrderItemDto> orderItemDtos) {
+    public OrderConfirm updateQuantity(List<OrderItemDto> orderItemDtos , OrderDto orderDto) {
 
         List<String> productIds = orderItemDtos.stream().map(OrderItemDto::getProductId).toList();
 
@@ -73,8 +75,25 @@ public class ProductServiceImpl implements ProductService {
             }
             product.setStock(product.getStock() - orderItemDto.getQuantity());
         }
-        return true;
+        return confirmOrder(orderDto);
     }
+    public OrderConfirm confirmOrder(OrderDto order) {
+        try {
+            OrderConfirm event = OrderConfirm.builder()
+                    .orderId(order.getId())
+                    .status(OrderStatus.CONFIRMED.name())
+                    .build();
+            kafkaTemplate.send("order-confirmed", event);
 
+            return event;
+        } catch (Exception e) {
+            OrderConfirm event = OrderConfirm.builder()
+                    .orderId(order.getId())
+                    .status(OrderStatus.CANCELLED.name())
+                    .build();
 
+            kafkaTemplate.send("order-confirmed", event);
+            return event;
+        }
+    }
 }
